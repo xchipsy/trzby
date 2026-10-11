@@ -154,3 +154,32 @@ select:focus-visible {
   }
 }
 
+
+/* KOMPAKTNÍ EDITACE NA STŘED */
+
+.settings-panel {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 22px 26px;
+}
+
+.settings-grid {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.settings-grid input,
+.settings-grid select {
+  padding: 8px 10px;
+}
+
+.settings-actions {
+  margin-top: 20px;
+}
+
+@media (max-width: 700px) {
+  .settings-panel {
+    padding: 16px;
+  }
+}
+
