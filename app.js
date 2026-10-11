@@ -92,8 +92,8 @@ async function loadSettings() {
 
   const data = await loadMonth(storeId, year, month);
 
-  planInput.value = data?.settings?.monthlyPlan ?? "";
-  lastYearInput.value = data?.settings?.lastYearRevenue ?? "";
+ planInput.value = formatMoney(data?.settings?.monthlyPlan);
+lastYearInput.value = formatMoney(data?.settings?.lastYearRevenue);
   saveStatus.textContent = "";
 }
 
@@ -110,11 +110,8 @@ async function saveSettings() {
   const settings = existing?.settings ??
     createDefaultSettings(storeId, year, month);
 
-  settings.monthlyPlan =
-    planInput.value === "" ? null : Number(planInput.value);
-
-  settings.lastYearRevenue =
-    lastYearInput.value === "" ? null : Number(lastYearInput.value);
+  settings.monthlyPlan = parseMoney(planInput.value);
+settings.lastYearRevenue = parseMoney(lastYearInput.value);
 
   await saveMonth(storeId, year, month, {
     ...existing,
@@ -140,4 +137,54 @@ document.getElementById("saveSettings")
   .addEventListener("click", saveSettings);
 
 loadSettings();
+
+
+function formatMoney(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  return Number(value).toLocaleString("cs-CZ", {
+    maximumFractionDigits: 0
+  });
+}
+
+function parseMoney(value) {
+  const digits = value.replace(/\D/g, "");
+  return digits === "" ? null : Number(digits);
+}
+
+function formatMoneyWhileTyping(input) {
+  const oldPosition = input.selectionStart ?? input.value.length;
+  const digitsBeforeCursor =
+    input.value.slice(0, oldPosition).replace(/\D/g, "").length;
+
+  const digits = input.value.replace(/\D/g, "");
+
+  input.value = digits
+    ? Number(digits).toLocaleString("cs-CZ")
+    : "";
+
+  if (digitsBeforeCursor === 0) {
+    input.setSelectionRange(0, 0);
+    return;
+  }
+
+  let position = 0;
+  let count = 0;
+
+  while (position < input.value.length && count < digitsBeforeCursor) {
+    if (/\d/.test(input.value[position])) count++;
+    position++;
+  }
+
+  input.setSelectionRange(position, position);
+}
+
+[planInput, lastYearInput].forEach(input => {
+  input.addEventListener("input", () => {
+    formatMoneyWhileTyping(input);
+  });
+});
+
 
