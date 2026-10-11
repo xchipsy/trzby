@@ -55,3 +55,7 @@
 body:has(.fixed-h-scroll){padding-bottom:23px}
 .back-left{bottom:33px}
 @media(max-width:700px){.result-chart{min-width:1250px}.table-strip{gap:12px}.shift-section{width:505px}}
+
+/* Názvy směn – stejná typografie jako názvy DP */
+.shift-name-field input::placeholder{color:#9a938b;font-size:12px;font-weight:400;opacity:1}
+.shift-name-field input{font-size:14px;font-weight:500}
