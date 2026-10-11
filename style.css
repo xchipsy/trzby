@@ -183,3 +183,8 @@ select:focus-visible {
   }
 }
 
+.money-input {
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
