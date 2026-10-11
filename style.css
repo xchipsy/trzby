@@ -188,3 +188,289 @@ select:focus-visible {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+
+:root {
+  --brown: #493426;
+  --brown-dark: #302117;
+  --yellow: #ffcf32;
+  --cream: #fff9ed;
+  --background: #f4f1eb;
+  --border: #ded8cd;
+  --text: #302820;
+  --green: #27864b;
+  --red: #c63b3b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+header {
+  background: var(--brown);
+  color: white;
+  padding: 16px 24px;
+  border-bottom: 5px solid var(--yellow);
+}
+
+header h1 {
+  margin: 0;
+  color: var(--yellow);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+header p {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+
+main {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px;
+  background: white;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+/* EDITACE */
+
+.settings-panel {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 22px 26px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(48, 33, 23, 0.06);
+}
+
+.settings-panel h2 {
+  margin: 0 0 24px;
+  color: var(--brown);
+  font-size: 21px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.settings-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-weight: bold;
+}
+
+.settings-grid input,
+.settings-grid select {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.money-input {
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+#saveSettings {
+  background: var(--yellow);
+  color: var(--brown-dark);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-weight: bold;
+}
+
+#saveSettings:hover {
+  background: #f2bd16;
+}
+
+#saveStatus {
+  font-weight: bold;
+  color: var(--green);
+}
+
+/* KALENDÁŘ ZAVŘENÝCH DNŮ */
+
+.calendar-section {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--cream);
+}
+
+.calendar-section summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--brown);
+  user-select: none;
+}
+
+#closedDaysSummary {
+  margin-left: 6px;
+  font-weight: normal;
+  color: #777;
+}
+
+.calendar-help {
+  margin: 14px 0;
+  color: #66584a;
+  font-size: 13px;
+}
+
+#closedDaysCalendar {
+  max-width: 430px;
+  margin: 0 auto;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.calendar-heading {
+  padding: 8px 0;
+  text-align: center;
+  font-weight: bold;
+  color: var(--brown);
+}
+
+.calendar-empty {
+  min-height: 43px;
+}
+
+.calendar-day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 43px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font-weight: bold;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.calendar-day:hover {
+  border-color: var(--brown);
+  background: #fff0bd;
+}
+
+.calendar-day.weekend {
+  background: #ece9e3;
+}
+
+.calendar-day.holiday {
+  border-color: #d9aa46;
+}
+
+.holiday-symbol {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 12px;
+  color: #b57a16;
+  line-height: 1;
+}
+
+.calendar-day.closed,
+.calendar-day.closed:hover {
+  background: #c94b4b;
+  border-color: #b13737;
+  color: white;
+}
+
+.calendar-day.closed .holiday-symbol {
+  color: white;
+}
+
+/* MENŠÍ OBRAZOVKY */
+
+@media (max-width: 700px) {
+  header {
+    padding: 12px 16px;
+  }
+
+  main {
+    padding: 12px;
+  }
+
+  .settings-panel {
+    padding: 16px;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 500px) {
+  .calendar-section {
+    padding: 12px;
+  }
+
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .calendar-day {
+    height: 38px;
+  }
+
+  .calendar-empty {
+    min-height: 38px;
+  }
+}
