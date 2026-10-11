@@ -1,0 +1,15 @@
+SUPER ZOO – Měsíční tržby: kompletní Editace (testovací verze)
+
+1. Rozbal ZIP.
+2. V repozitáři xchipsy/trzby otevři Add file → Upload files.
+3. Přetáhni VŠECHNY soubory z rozbalené složky (nikoli složku samotnou).
+4. GitHub se zeptá na přepsání existujících souborů; potvrď Commit changes.
+5. Po nasazení otevři https://xchipsy.github.io/trzby/
+
+Pozor: testovací úložiště je localStorage v konkrétním prohlížeči.
+Data se nesdílejí mezi počítači ani prohlížeči.
+Výsledky jsou zatím jen připravená stránka, nikoli funkční tabulka.
+Nezadávej skutečná interní firemní data.
+
+Obsah balíčku: index.html, app.js, style.css, calendar.js, settings.js,
+storage.js, vysledky.html.

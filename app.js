@@ -1,303 +1,51 @@
+import {STORES,MONTHS,SHIFT_COLORS,FAMILY_TARGET,createDefaultSettings,getStoreLabel} from './settings.js';
+import {loadMonth,saveMonth,getConfiguredStores,setConfiguredStores} from './storage.js';
+import {renderCalendar} from './calendar.js';
 
-import {
-  STORES,
-  MONTHS,
-  createDefaultSettings
-} from "./settings.js";
-
-import {
-  loadMonth,
-  saveMonth
-} from "./storage.js";
-
-import { renderCalendar } from "./calendar.js";
-
-const app = document.getElementById("app");
-const today = new Date();
-
-app.innerHTML = `
-  <section class="settings-panel">
-    <h2>Editace – nastavení měsíce</h2>
-
-    <div class="settings-grid">
-      <label>
-        Prodejna
-        <select id="store">
-          ${STORES.map(store => `
-            <option value="${store.id}">
-              CS${store.id} ${store.name}
-            </option>
-          `).join("")}
-        </select>
-      </label>
-
-      <label>
-        Měsíc
-        <select id="month">
-          ${MONTHS.map((name, index) => `
-            <option value="${index + 1}">
-              ${name}
-            </option>
-          `).join("")}
-        </select>
-      </label>
-
-      <label>
-        Rok
-        <input
-          id="year"
-          type="number"
-          min="2025"
-          max="2100"
-          value="${today.getFullYear()}"
-        >
-      </label>
-    </div>
-
-    <div class="settings-grid">
-      <label>
-        Měsíční plán (Kč)
-        <input
-          id="monthlyPlan"
-          type="text"
-          inputmode="numeric"
-          class="money-input"
-        >
-      </label>
-
-      <label>
-        Loňský obrat (Kč)
-        <input
-          id="lastYearRevenue"
-          type="text"
-          inputmode="numeric"
-          class="money-input"
-        >
-      </label>
-    </div>
-
-    <details class="calendar-section">
-      <summary>
-        Zavřené dny
-        <span id="closedDaysSummary">(žádné)</span>
-      </summary>
-
-      <p class="calendar-help">
-        Kliknutím označ dny, kdy je prodejna zavřená.
-        Tyto dny nebudou zahrnuté do denního plánu tržeb.
-      </p>
-
-      <div id="closedDaysCalendar"></div>
-    </details>
-
-    <div class="settings-actions">
-      <button id="saveSettings" type="button">
-        Uložit nastavení
-      </button>
-      <span id="saveStatus" role="status"></span>
-    </div>
-  </section>
-`;
-
-const storeInput = document.getElementById("store");
-const monthInput = document.getElementById("month");
-const yearInput = document.getElementById("year");
-const planInput = document.getElementById("monthlyPlan");
-const lastYearInput = document.getElementById("lastYearRevenue");
-const saveStatus = document.getElementById("saveStatus");
-
-let closedDays = [];
-let selectionVersion = 0;
-
-monthInput.value = String(today.getMonth() + 1);
-storeInput.value = "249";
-
-function getSelection() {
-  return {
-    storeId: storeInput.value,
-    year: Number(yearInput.value),
-    month: Number(monthInput.value)
-  };
+const app=document.getElementById('app');
+const now=new Date();
+const state={stores:getConfiguredStores(),storeId:'',year:now.getFullYear(),month:now.getMonth()+1,settings:null,dirty:false,loading:false};
+const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>n===null||n===undefined||n===''?'':Number(n).toLocaleString('cs-CZ',{maximumFractionDigits:0});
+const number=s=>{const digits=String(s??'').replace(/\D/g,'');return digits?Number(digits):null};
+const validPeriod=()=>Number.isInteger(state.year)&&state.year>=2025&&state.year<=2100&&state.month>=1&&state.month<=12;
+const previousPeriod=()=>state.month===1?{year:state.year-1,month:12}:{year:state.year,month:state.month-1};
+const dateKey=(y,m,d)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const startMonday=(y,m)=>{const d=new Date(y,m-1,1);d.setDate(d.getDate()-(d.getDay()+6)%7);return dateKey(d.getFullYear(),d.getMonth()+1,d.getDate())};
+const diffWeeks=(a,b)=>Math.round((new Date(`${b}T12:00:00`)-new Date(`${a}T12:00:00`))/604800000);
+function shiftForDate(day){const s=state.settings.shifts,key=dateKey(state.year,state.month,day);if(s.overrides?.[key])return Number(s.overrides[key]);const date=new Date(state.year,state.month-1,day),monday=new Date(date);monday.setDate(date.getDate()-(date.getDay()+6)%7);const mk=dateKey(monday.getFullYear(),monday.getMonth()+1,monday.getDate());const weeks=diffWeeks(s.anchorMonday||startMonday(state.year,state.month),mk);return ((weeks%2)+2)%2===0?Number(s.firstWeekLongShift):3-Number(s.firstWeekLongShift)}
+function defaultShifts(s){s.shifts??={};s.shifts.colors??=['#F5D76E','#88BCE5'];s.shifts.firstWeekLongShift??=1;s.shifts.overrides??={};s.shifts.anchorMonday??=startMonday(state.year,state.month);return s}
+function ensureSettings(s){s.closedDays??=[];s.employees??=[];s.dp??={name:'',target:null,unit:'ks'};s.secondDp??={name:'',target:null,unit:'ks'};return defaultShifts(s)}
+function newMonthFrom(previous){const s=createDefaultSettings(state.storeId,state.year,state.month);if(!previous)return ensureSettings(s);const p=ensureSettings(structuredClone(previous));s.employees=p.employees.map(e=>({...e}));s.shifts.colors=[...p.shifts.colors];s.shifts.firstWeekLongShift=p.shifts.firstWeekLongShift;s.shifts.anchorMonday=p.shifts.anchorMonday||startMonday(state.year,state.month);s.dp.name=p.dp.name;s.dp.unit=p.dp.unit;s.secondDp.name=p.secondDp.name;s.secondDp.unit=p.secondDp.unit;return ensureSettings(s)}
+function markDirty(){state.dirty=true;const msg=document.querySelector('#status');if(msg){msg.textContent='Neuložené změny';msg.className='status unsaved'}}
+function guard(){return !state.dirty||confirm('Máš neuložené změny. Opravdu pokračovat bez uložení?')}
+function moneyInput(id,label,value){return `<label class="field"><span>${label}</span><input class="money-input" id="${id}" inputmode="numeric" type="text" value="${money(value)}" autocomplete="off"></label>`}
+function selectOptions(options,value){return options.map(o=>`<option value="${escapeHTML(o.value)}" ${String(o.value)===String(value)?'selected':''}>${escapeHTML(o.label)}</option>`).join('')}
+function colorSelector(index){const current=state.settings.shifts.colors[index];return `<div class="color-block"><strong>Směna ${index+1}</strong><div class="color-options">${SHIFT_COLORS.map(c=>`<label class="color-choice" title="${c.name}"><input type="radio" name="shiftColor${index}" value="${c.hex}" ${current===c.hex?'checked':''}><span class="color-swatch" style="--swatch:${c.hex}"></span><small>${c.name}</small></label>`).join('')}</div></div>`}
+function renderEmployeeRows(){const host=document.querySelector('#employeeRows');host.replaceChildren();state.settings.employees.forEach((employee,i)=>{const row=document.createElement('div');row.className='employee-row';row.innerHTML=`<label class="field"><span>Jméno</span><input data-employee-name="${i}" value="${escapeHTML(employee.name)}" placeholder="Jméno zaměstnance"></label><label class="field"><span>Směna</span><select data-employee-shift="${i}">${selectOptions([{value:1,label:'Směna 1'},{value:2,label:'Směna 2'}],employee.shift)}</select></label><button class="button secondary remove-employee" data-remove-employee="${i}" type="button" aria-label="Odebrat zaměstnance">Odebrat</button>`;host.append(row)})}
+function renderRotation(){const host=document.querySelector('#rotationDays'),days=new Date(state.year,state.month,0).getDate();host.replaceChildren();const table=document.createElement('div');table.className='rotation-grid';for(let day=1;day<=days;day++){const shift=shiftForDate(day),key=dateKey(state.year,state.month,day),manual=Boolean(state.settings.shifts.overrides?.[key]);const box=document.createElement('div');box.className='rotation-day';box.innerHTML=`<span>${day}.</span><select aria-label="Směna pro ${day}." data-rotation-day="${day}" style="background:${state.settings.shifts.colors[shift-1]}"><option value="auto" ${!manual?'selected':''}>${shift} · auto</option><option value="1" ${manual&&shift===1?'selected':''}>1 · ručně</option><option value="2" ${manual&&shift===2?'selected':''}>2 · ručně</option></select>`;table.append(box)}host.append(table)}
+function render(){const s=state.settings;app.innerHTML=`<section class="settings-panel"><h2>Editace – nastavení měsíce</h2><div class="settings-grid period-grid"><label class="field"><span>Prodejna</span><select id="store">${selectOptions(state.stores.map(id=>({value:id,label:getStoreLabel(id)})),state.storeId)}</select></label><label class="field"><span>Měsíc</span><select id="month">${selectOptions(MONTHS.map((name,i)=>({value:i+1,label:name})),state.month)}</select></label><label class="field"><span>Rok</span><input id="year" type="number" min="2025" max="2100" value="${state.year}"></label></div><div class="store-actions"><button class="button secondary" id="addStore" type="button">+ Přidat prodejnu</button><span class="hint">V nabídce jsou jen prodejny přidané do této skupiny.</span></div><hr><h3>Tržby</h3><div class="settings-grid two-col">${moneyInput('monthlyPlan','Měsíční plán (Kč)',s.monthlyPlan)}${moneyInput('lastYearRevenue','Loňský obrat (Kč)',s.lastYearRevenue)}</div><details class="calendar-section"><summary>Zavřené dny <span id="closedDaysSummary"></span></summary><p class="hint">Kliknutím označ zavřené dny. Svátky ✳ jsou pouze upozornění.</p><div id="closedDaysCalendar"></div></details><hr><h3>Family</h3><p class="info-line">Cíl registrací Family: <strong>${FAMILY_TARGET*100} % z počtu účtenek</strong> (pevně nastavený).</p><hr><h3>DP – centrální kampaň</h3><div class="settings-grid campaign-grid"><label class="field"><span>Název kampaně</span><input id="dpName" value="${escapeHTML(s.dp.name)}" placeholder="Název DP"></label>${moneyInput('dpTarget','Měsíční cíl',s.dp.target)}<label class="field"><span>Jednotka</span><select id="dpUnit">${selectOptions([{value:'ks',label:'ks'},{value:'Kč',label:'Kč'}],s.dp.unit)}</select></label></div><h3>2. DP – další kampaň</h3><div class="settings-grid campaign-grid"><label class="field"><span>Název kampaně</span><input id="secondDpName" value="${escapeHTML(s.secondDp.name)}" placeholder="Nepovinné"></label>${moneyInput('secondDpTarget','Měsíční cíl',s.secondDp.target)}<label class="field"><span>Jednotka</span><select id="secondDpUnit">${selectOptions([{value:'ks',label:'ks'},{value:'Kč',label:'Kč'}],s.secondDp.unit)}</select></label></div><p class="hint">Pokud 2. DP nemá název ani cíl, nebude se ve Výsledcích zobrazovat.</p><hr><h3>Barvy směn</h3><div class="shift-colors">${colorSelector(0)}${colorSelector(1)}</div><hr><h3>Zaměstnanci</h3><div id="employeeRows"></div><button id="addEmployee" class="button secondary" type="button">+ Přidat zaměstnance</button><hr><details id="rotationSection" class="rotation-section"><summary>Rozpis směn</summary><p class="hint">Střídání směn stačí nastavit pouze při prvním použití. V dalších měsících rozpis automaticky navazuje na předchozí období a není nutné jej znovu nastavovat.</p><label class="field rotation-start"><span>Směna s dlouhým týdnem v počátečním týdnu</span><select id="firstLongShift">${selectOptions([{value:1,label:'Směna 1'},{value:2,label:'Směna 2'}],s.shifts.firstWeekLongShift)}</select></label><p class="hint">Dlouhý týden: Po, Út, Pá, So, Ne. Krátký: St, Čt. Výjimku nastavíš přímo u dne.</p><div id="rotationDays"></div></details><div class="settings-actions"><button id="saveSettings" class="button primary" type="button">Uložit nastavení</button><button id="openResults" class="button secondary" type="button">Otevřít Výsledky ↗</button><button id="copyResults" class="button secondary" type="button">Kopírovat odkaz na Výsledky</button></div><p id="status" class="status" role="status"></p><p class="storage-warning">Testovací verze: data se ukládají pouze v tomto prohlížeči. Odkaz na Výsledky zatím nepřenáší data do jiného zařízení. Nevkládej skutečné firemní tržby.</p></section>`;
+  renderEmployeeRows();renderCalendar(document.querySelector('#closedDaysCalendar'),state.year,state.month,s.closedDays,days=>{s.closedDays=days;updateClosedSummary();markDirty()});updateClosedSummary();renderRotation();bindEvents();}
+function updateClosedSummary(){document.querySelector('#closedDaysSummary').textContent=state.settings.closedDays.length?`(${state.settings.closedDays.length} dní)`:'(žádné)'}
+function moneyTyping(input){const pos=input.selectionStart??input.value.length,before=input.value.slice(0,pos).replace(/\D/g,'').length,digits=input.value.replace(/\D/g,'');input.value=digits?Number(digits).toLocaleString('cs-CZ'):'';let cursor=0,seen=0;while(cursor<input.value.length&&seen<before){if(/\d/.test(input.value[cursor]))seen++;cursor++}input.setSelectionRange(cursor,cursor)}
+function bindEvents(){
+  for(const id of ['monthlyPlan','lastYearRevenue','dpTarget','secondDpTarget']){const input=document.getElementById(id);input.addEventListener('input',()=>{moneyTyping(input);const path={monthlyPlan:['monthlyPlan'],lastYearRevenue:['lastYearRevenue'],dpTarget:['dp','target'],secondDpTarget:['secondDp','target']}[id];if(path.length===1)state.settings[path[0]]=number(input.value);else state.settings[path[0]][path[1]]=number(input.value);markDirty()})}
+  for(const [id,obj,key] of [['dpName','dp','name'],['dpUnit','dp','unit'],['secondDpName','secondDp','name'],['secondDpUnit','secondDp','unit']])document.getElementById(id).addEventListener('input',e=>{state.settings[obj][key]=e.target.value;markDirty()});
+  for(const index of [0,1])document.querySelectorAll(`[name="shiftColor${index}"]`).forEach(input=>input.addEventListener('change',()=>{state.settings.shifts.colors[index]=input.value;markDirty();renderRotation()}));
+  document.getElementById('employeeRows').addEventListener('input',e=>{const i=e.target.dataset.employeeName;if(i!==undefined){state.settings.employees[Number(i)].name=e.target.value;markDirty()}});
+  document.getElementById('employeeRows').addEventListener('change',e=>{const i=e.target.dataset.employeeShift;if(i!==undefined){state.settings.employees[Number(i)].shift=Number(e.target.value);markDirty()}});
+  document.getElementById('employeeRows').addEventListener('click',e=>{const btn=e.target.closest('[data-remove-employee]');if(!btn)return;if(!confirm('Odebrat zaměstnance z tohoto měsíce? Historická data v jiných měsících zůstanou.'))return;state.settings.employees.splice(Number(btn.dataset.removeEmployee),1);renderEmployeeRows();markDirty()});
+  document.getElementById('addEmployee').addEventListener('click',()=>{state.settings.employees.push({id:(globalThis.crypto?.randomUUID?.()??String(Date.now())),name:'',shift:1});renderEmployeeRows();markDirty();document.querySelector('#employeeRows .employee-row:last-child input')?.focus()});
+  document.getElementById('firstLongShift').addEventListener('change',e=>{state.settings.shifts.firstWeekLongShift=Number(e.target.value);renderRotation();markDirty()});
+  document.getElementById('rotationDays').addEventListener('change',e=>{const day=e.target.dataset.rotationDay;if(!day)return;const key=dateKey(state.year,state.month,Number(day));if(e.target.value==='auto')delete state.settings.shifts.overrides[key];else state.settings.shifts.overrides[key]=Number(e.target.value);renderRotation();markDirty()});
+  for(const id of ['store','month','year'])document.getElementById(id).addEventListener('change',async e=>{const newStore=document.getElementById('store').value,newMonth=Number(document.getElementById('month').value),newYear=Number(document.getElementById('year').value);if(!guard()){render();return}if(!Number.isInteger(newYear)||newYear<2025||newYear>2100){alert('Zadej rok 2025–2100.');render();return}state.storeId=newStore;state.month=newMonth;state.year=newYear;await loadSelection()});
+  document.getElementById('addStore').addEventListener('click',async()=>{if(!guard())return;const available=STORES.filter(x=>!state.stores.includes(x.id));if(!available.length){alert('Všechny prodejny už jsou přidané.');return}const raw=prompt('Zadej číslo prodejny ze seznamu:\n'+available.map(s=>`CS${s.id} – ${s.name}`).join('\n'));if(raw===null)return;const id=raw.trim().replace(/^CS/i,'');if(!available.some(s=>s.id===id)){alert('Zadej platné číslo prodejny, kterou ještě nemáš přidanou.');return}state.stores.push(id);state.stores.sort((a,b)=>Number(a)-Number(b));setConfiguredStores(state.stores);state.storeId=id;await loadSelection()});
+  document.getElementById('saveSettings').addEventListener('click',save);
+  document.getElementById('openResults').addEventListener('click',()=>window.open(resultsURL(),'_blank','noopener'));
+  document.getElementById('copyResults').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(resultsURL());document.getElementById('status').textContent='Odkaz zkopírován ✓'}catch{prompt('Zkopíruj odkaz:',resultsURL())}});
 }
-
-function validSelection(year, month) {
-  return Number.isInteger(year) &&
-    year >= 2025 &&
-    year <= 2100 &&
-    Number.isInteger(month) &&
-    month >= 1 &&
-    month <= 12;
-}
-
-function formatMoney(value) {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
-
-  return Number(value).toLocaleString("cs-CZ", {
-    maximumFractionDigits: 0
-  });
-}
-
-function parseMoney(value) {
-  const digits = value.replace(/\D/g, "");
-  return digits === "" ? null : Number(digits);
-}
-
-function formatMoneyWhileTyping(input) {
-  const oldPosition = input.selectionStart ?? input.value.length;
-
-  const digitsBeforeCursor = input.value
-    .slice(0, oldPosition)
-    .replace(/\D/g, "").length;
-
-  const digits = input.value.replace(/\D/g, "");
-
-  input.value = digits
-    ? Number(digits).toLocaleString("cs-CZ")
-    : "";
-
-  if (digitsBeforeCursor === 0) {
-    input.setSelectionRange(0, 0);
-    return;
-  }
-
-  let position = 0;
-  let count = 0;
-
-  while (
-    position < input.value.length &&
-    count < digitsBeforeCursor
-  ) {
-    if (/\d/.test(input.value[position])) {
-      count++;
-    }
-    position++;
-  }
-
-  input.setSelectionRange(position, position);
-}
-
-function markUnsaved() {
-  saveStatus.textContent = "Neuložené změny";
-}
-
-function updateCalendarSummary() {
-  const summary = document.getElementById("closedDaysSummary");
-
-  summary.textContent = closedDays.length
-    ? `(${closedDays.length} dní)`
-    : "(žádné)";
-}
-
-function updateCalendar() {
-  const { year, month } = getSelection();
-
-  updateCalendarSummary();
-
-  const container = document.getElementById("closedDaysCalendar");
-
-  if (!validSelection(year, month)) {
-    container.replaceChildren();
-    return;
-  }
-
-  renderCalendar(
-    container,
-    year,
-    month,
-    closedDays,
-    days => {
-      closedDays = days;
-      updateCalendarSummary();
-      markUnsaved();
-    }
-  );
-}
-
-async function loadSettings() {
-  const version = ++selectionVersion;
-  const { storeId, year, month } = getSelection();
-
-  if (!validSelection(year, month)) {
-    planInput.value = "";
-    lastYearInput.value = "";
-    closedDays = [];
-    updateCalendar();
-    saveStatus.textContent = "Zkontroluj rok a měsíc.";
-    return;
-  }
-
-  try {
-    const data = await loadMonth(storeId, year, month);
-
-    if (version !== selectionVersion) return;
-
-    planInput.value = formatMoney(
-      data?.settings?.monthlyPlan
-    );
-
-    lastYearInput.value = formatMoney(
-      data?.settings?.lastYearRevenue
-    );
-
-    closedDays = [
-      ...(data?.settings?.closedDays ?? [])
-    ];
-
-    updateCalendar();
-    saveStatus.textContent = "";
-  } catch (error) {
-    console.error("Chyba načítání:", error);
-    saveStatus.textContent = "Nepodařilo se načíst nastavení.";
-  }
-}
-
-async function saveSettings() {
-  const { storeId, year, month } = getSelection();
-
-  if (!validSelection(year, month)) {
-    saveStatus.textContent = "Zkontroluj rok a měsíc.";
-    return;
-  }
-
-  try {
-    const existing = await loadMonth(storeId, year, month);
-
-    const settings = {
-      ...(existing?.settings ??
-        createDefaultSettings(storeId, year, month))
-    };
-
-    settings.monthlyPlan = parseMoney(planInput.value);
-    settings.lastYearRevenue = parseMoney(lastYearInput.value);
-    settings.closedDays = [...closedDays];
-
-    await saveMonth(storeId, year, month, {
-      ...(existing ?? {}),
-      settings
-    });
-
-    saveStatus.textContent = "Nastavení uloženo ✓";
-  } catch (error) {
-    console.error("Chyba ukládání:", error);
-    saveStatus.textContent = "Nepodařilo se uložit nastavení.";
-  }
-}
-
-storeInput.addEventListener("change", loadSettings);
-monthInput.addEventListener("change", loadSettings);
-yearInput.addEventListener("change", loadSettings);
-
-[planInput, lastYearInput].forEach(input => {
-  input.addEventListener("input", () => {
-    formatMoneyWhileTyping(input);
-    markUnsaved();
-  });
-});
-
-document
-  .getElementById("saveSettings")
-  .addEventListener("click", saveSettings);
-
-loadSettings();
+function resultsURL(){return new URL('vysledky.html',window.location.href).href}
+async function loadSelection(){if(!validPeriod())return;state.dirty=false;const existing=await loadMonth(state.storeId,state.year,state.month);if(existing?.settings)state.settings=ensureSettings(structuredClone(existing.settings));else{const prev=previousPeriod(),last=prev.year>=2025?await loadMonth(state.storeId,prev.year,prev.month):null;state.settings=newMonthFrom(last?.settings)}render()}
+async function save(){if(!validPeriod())return;const s=state.settings;if(s.employees.some(e=>!e.name.trim())){alert('Doplň jména zaměstnanců, nebo prázdné řádky odeber.');return}if(s.employees.some((e,i)=>s.employees.some((f,j)=>i!==j&&e.name.trim().toLowerCase()===f.name.trim().toLowerCase()))){alert('Zaměstnanci mají duplicitní jména.');return}try{const old=await loadMonth(state.storeId,state.year,state.month);await saveMonth(state.storeId,state.year,state.month,{...(old??{}),settings:structuredClone(s)});state.dirty=false;const msg=document.getElementById('status');msg.textContent='Nastavení uloženo ✓';msg.className='status saved'}catch(error){console.error(error);document.getElementById('status').textContent='Ukládání se nezdařilo.'}}
+async function init(){if(!state.stores.length){state.stores=['249'];setConfiguredStores(state.stores)}state.storeId=state.stores.includes('249')?'249':state.stores[0];await loadSelection()}
+init().catch(error=>{console.error(error);app.textContent='Nepodařilo se načíst Editaci. Zkontroluj konzoli prohlížeče.'});
