@@ -51,13 +51,11 @@ app.innerHTML = `
     <div class="settings-grid">
       <label>
         Měsíční plán (Kč)
-        <input id="monthlyPlan" type="number" min="0">
-      </label>
+<input id="monthlyPlan" type="text" inputmode="numeric" class="money-input">      </label>
 
       <label>
         Loňský obrat (Kč)
-        <input id="lastYearRevenue" type="number" min="0">
-      </label>
+<input id="lastYearRevenue" type="text" inputmode="numeric" class="money-input">      </label>
     </div>
 
     <div class="settings-actions">
