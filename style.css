@@ -80,3 +80,77 @@ select:focus-visible {
   }
 }
 
+
+/* EDITACE – NASTAVENÍ MĚSÍCE */
+
+.settings-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 3px 12px rgba(48, 33, 23, 0.06);
+}
+
+.settings-panel h2 {
+  margin: 0 0 24px;
+  color: var(--brown);
+  font-size: 21px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.settings-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-weight: bold;
+}
+
+.settings-grid input,
+.settings-grid select {
+  width: 100%;
+  min-width: 0;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+
+#saveSettings {
+  background: var(--yellow);
+  color: var(--brown-dark);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-weight: bold;
+}
+
+#saveSettings:hover {
+  background: #f2bd16;
+}
+
+#saveStatus {
+  font-weight: bold;
+  color: var(--green);
+}
+
+@media (max-width: 700px) {
+  .settings-panel {
+    padding: 16px;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
