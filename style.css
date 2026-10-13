@@ -78,3 +78,14 @@ body:has(.fixed-h-scroll){padding-bottom:23px}
 .chart-day-bars{gap:1px}
 .bar-pair .plan-bar,.bar-pair .actual-bar{width:clamp(5px,0.95vw,16px)}
 @media(max-width:700px){.result-chart{min-width:0!important}.chart-axis{width:43px;flex:none}.chart-day small{font-size:8px}.bar-pair .plan-bar,.bar-pair .actual-bar{width:5px}}
+/* Ctvrte kolo: citelnejsi hodnoty a plovouci hlavicky pri svislem posunu stranky */
+.shift-table td,.shift-table td:first-child{font-size:14px;font-weight:600}
+.compact-table tbody td,.compact-table tbody input.daily-input{font-size:14px}
+.floating-results-header{position:fixed;top:0;z-index:30;overflow:hidden;pointer-events:none;display:none;background:#fff;box-shadow:0 3px 9px #0002}
+.floating-results-strip{display:flex;align-items:flex-start;gap:12px;width:max-content;padding:0 2px 2px}
+.floating-results-strip>section{border:1px solid #b69d7b;border-radius:3px;background:#fff;overflow:hidden;min-width:0}
+.floating-results-strip table{margin:0}
+.floating-results-strip thead th{position:static!important}
+.floating-results-strip .shift-section{padding:0 5px 0;min-height:0!important}
+.floating-results-strip .shift-section h3{height:37px;margin:0 -5px}
+.floating-results-strip .section-metrics,.floating-results-strip .shift-charts{display:none}
